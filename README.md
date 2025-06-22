@@ -4,7 +4,7 @@
 
 ## 注册
 
-- 链接：[Voyager Platform](https://voyager.xyz)
+- 链接：[Voyager Platform](https://voyager.preview.craft-world.gg/)
 
 ## 功能特性
 
