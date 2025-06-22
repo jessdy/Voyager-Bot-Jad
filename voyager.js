@@ -10,9 +10,35 @@ import ProgressBar from 'progress';
 import ora from 'ora';
 import { ethers } from 'ethers';
 import { SiweMessage } from 'siwe';
+import mysql from 'mysql2/promise';
 
 const API_KEY = 'AIzaSyDgDDykbRrhbdfWUpm1BUgj4ga7d_-wy_g';
 const APP_CHECK_TOKEN = 'eyJraWQiOiJrTFRMakEiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxOjU0MzEyMzE3NDQyOndlYjo1ODVmNjIzNTRkYjUzYzE0MmJlZDFiIiwiYXVkIjpbInByb2plY3RzXC81NDMxMjMxNzQ0MiIsInByb2plY3RzXC9nYW1lLXByZXZpZXctNTFjMmEiXSwicHJvdmlkZXIiOiJyZWNhcHRjaGFfdjMiLCJpc3MiOiJodHRwczpcL1wvZmlyZWJhc2VhcHBjaGVjay5nb29nbGVhcGlzLmNvbVwvNTQzMTIzMTc0NDIiLCJleHAiOjE3NTAxMDE0NTUsImlhdCI6MTc1MDAxNTA1NSwianRpIjoiZTdjTkdtSlg5NFFDRl9QMUJEc3BUdnFUd2xDbnlDbzBJU2hpRnNpNzZFMCJ9.Qe0RNIuJOmkCO2ovyk9tJEZO1OBKkzZg8P4KmBC3qskl6w5A6rYPJdeF7w6KdL76WQQD5mEzhbMOU6oIKr2q6-g3XjiXLmPwEr2jrfYWMB8uVVbf2Qxq6aANpeiuN_J7qYlARdhL5jbof_nReuAthLyJBmyfag2L1N8KFslai_HZJb2SK2ZWZJEgxrZ-a44ePqGaBlQmqFRQlOIhvDv07k-G9Lx15dU_1_tNR5u7FZ1wsdNVg6d1bnUFfLumEH4kil-ycm-fsNHsF06VK_35ZF7PwJUCeUpT23kb1ZdQzIpX6WTmioJRH5bgcaydSXnBQb35Pz5pAFOpM25y3biThSiHiBCzMYFCOrhzh9a1q2grnJOvjU6cv6Anu8RZgvDVVx8cz1jKymfg4aAVt23F4Zb3tZPjKZ3BaK_dfgDI1TqV6_R644mzJ6Ys8sxfKib0mxasD47NyAMqnQCwVMugiYNOZCD_zdxPBJn0SKCphfQvYMzqKkgb8JFeUQVpuWry';
+
+// MySQL数据库配置
+const dbConfig = {
+  host: '10.10.10.45',
+  port: 32790,
+  user: 'root',
+  password: 'root',
+  database: 'airdrop'
+};
+
+// 创建数据库连接池
+const pool = mysql.createPool(dbConfig);
+
+// 插入score表记录的函数
+async function insertScoreRecord(account, walletAddress, totalReward) {
+  try {
+      const connection = await pool.getConnection();
+      const query = `INSERT INTO score (account, project, wallet, score, count_date) VALUES (?, ?, ?, ?, NOW())`;
+      await connection.execute(query, [account, 'Voyager', walletAddress, totalReward]);
+      connection.release();
+      console.log(`Score record inserted successfully for user: ${walletAddress}`);
+  } catch (error) {
+      console.error('Error inserting score record:', error);
+  }
+}
 
 const logger = {
   info: (msg, options = {}) => {
@@ -216,7 +242,7 @@ async function readProxies() {
     }
     return proxies;
   } catch (error) {
-    logger.warn('未找到 proxy.txt 文件。', { emoji: '⚠️ ' });
+    logger.warn('未找到 proxies.txt 文件。', { emoji: '⚠️ ' });
     return [];
   }
 }
@@ -592,6 +618,7 @@ async function processAccount(privateKey, index, total, proxy) {
     const profileInfo = await fetchProfileInfo(uid, sessionCookie, proxy, context);
     if (profileInfo) {
       printProfileInfo(profileInfo.username, profileInfo.points, profileInfo.level, context);
+      insertScoreRecord(profileInfo.username, address, profileInfo.points);
     } else {
       logger.warn('显示用户信息失败', { emoji: '⚠️', context });
     }
